@@ -1,8 +1,6 @@
 const playerManager = require('./playerManager');
 const matchManager = require('./matchManager');
 const gameManager = require('./gameManager');
-// const tournamentManager = require('./tournamentManager');
-const presenceManager = require('./presenceManager');
 
 module.exports = {
   ping(connection, data, req, playerId) {
@@ -10,6 +8,27 @@ module.exports = {
       type: 'pong',
       data: { received: Date.now(), from: playerId }
     }));
+  },
+
+  leave(connection, data, req, playerId) {
+    // Remove player from match if they are in one
+    const match = matchManager.getPlayerMatch(data.username);
+    if (match) {
+      console.log(`Player ${data.username} is leaving match ${match.id}`);
+      matchManager.removeMatch(match.id);
+    }
+	else
+	{
+		console.log(`Player ${data.username} is leaving the game`);
+		matchManager.removePlayerFromWaitingQueue(data.username);
+	}
+
+    // Remove player from playerManager
+    playerManager.removePlayer(data.username);
+	connection.send(JSON.stringify({
+	  type: 'left',
+	  data: { message: `Player ${data.username} has left the game` }
+	}));
   },
   
   auth(connection, data, req, playerId) {
@@ -22,35 +41,12 @@ module.exports = {
     }
     const token = data.token;
     playerManager.updatePlayerToken(playerId, token);
-    presenceManager.renameoldplayerkey(playerId, token).then(() => {
-      connection.playerId = token;
-      connection.send(JSON.stringify({
-        type: 'auth_success',
-        data: { playerId: token }
-      }));
-    }).catch(err => {
-      console.error('Error renaming player key:', err);
-      connection.send(JSON.stringify({
-        type: 'error',
-        data: { message: 'Failed to update player ID' }
-      }));
-    });
   },
 
-  list_players(connection, data, req, playerId) {
-    const all = playerManager.getAllPlayers().map(([id, p]) => ({
-      playerId: id,
-      status: p.status
-    }));
-    connection.send(JSON.stringify({
-      type: 'player_list',
-      data: all
-    }));
-  },
 
   join_match(connection, data, req, playerId) {
     const type = data?.type === '2v2' ? '2v2' : '1v1';
-    const match = matchManager.joinMatch(playerId, type);
+    const match = matchManager.joinMatch(connection, data.username, type);
 
     connection.send(JSON.stringify({
       type: 'match_joined',
@@ -59,7 +55,7 @@ module.exports = {
   },
 
   match_ready(connection, data, req, playerId) {
-    const match = matchManager.getPlayerMatch(playerId);
+    const match = matchManager.getPlayerMatch(data.username);
     if (match && match.status === 'ready') {
       match.status = 'playing';
       gameManager.startGame(match);
@@ -75,33 +71,8 @@ module.exports = {
       }));
     }
     else
-      console.log(`Player ${playerId} input:`, data.y);
-    gameManager.updatePaddle(playerId, data.y);
+      console.log(`Player ${data.username} input:`, data.y);
+    gameManager.updatePaddle(data.matchId, data.username, data.y);
   },
 
-  // join_tournament(connection, data, req, playerId) {
-  //   const tournamentId = data?.tournamentId;
-  //   const ok = tournamentManager.joinTournament(tournamentId, playerId);
-  //   connection.send(JSON.stringify({
-  //     type: 'tournament_joined',
-  //     data: { success: ok, tournamentId }
-  //   }));
-  // },
-
-  // simulate_win(connection, data, req, playerId) {
-  //   const tournamentId = data?.tournamentId;
-  //   tournamentManager.reportMatchResult(tournamentId, playerId);
-  // },
-
-  list_online(connection, data, req, playerId) {
-    presenceManager.listOnlinePlayers().then(players => {
-      connection.send(JSON.stringify({
-        type: 'online_list',
-        data: players
-      }));
-    });
-  }
-
-
 };
-

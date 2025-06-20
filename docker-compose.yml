@@ -25,6 +25,25 @@ services:
       retries: 3
       start_period: 30s
 
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: always
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   nginx:
     image: nginx:alpine
     container_name: nginx
@@ -42,3 +61,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+volumes:
+  postgres_data:

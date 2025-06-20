@@ -79,11 +79,27 @@ async function listOnlinePlayers() {
   return onlinePlayers;
 }
 
+// getPlayerId function to extract playerId from token
+async function getPlayerId(token) {
+  try {
+	const playerId = await redis.get(`${PREFIX}${token}`);
+	if (!playerId) {
+	  console.warn(`No player found for token ${token}`);
+	  return null;
+	}
+	console.log(`Found playerId ${playerId} for token ${token}`);
+	return playerId ? playerId.replace(PREFIX, '') : null;
+  } catch (err) {
+	console.error(`❌ getPlayerId error for token ${token}:`, err);
+	return null;
+  }
+}
 
 module.exports = {
   setOnline,
   setOffline,
   isOnline,
   listOnlinePlayers,
-  renameoldplayerkey
+  renameoldplayerkey,
+  getPlayerId
 };

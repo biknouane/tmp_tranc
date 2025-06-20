@@ -20,3 +20,7 @@ yarn-error.log*
 # Build output (if applicable)
 dist/
 build/
+
+/generated/prisma
+
+./chat
