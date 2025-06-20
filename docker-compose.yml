@@ -12,6 +12,10 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
 
   redis:
     image: redis:7
@@ -24,6 +28,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - app-network
 
   postgres:
     image: postgres:16
@@ -43,6 +49,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    networks:
+      - app-network
 
   nginx:
     image: nginx:alpine
@@ -61,6 +69,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
